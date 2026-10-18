@@ -62,6 +62,9 @@ export function nextTripAfter(trip) {
 
 export const locations = () => unique(['With me', 'Switzerland', 'UK', ...data.items.map((i) => i.location)]);
 export const categories = () => unique(data.items.map((i) => i.category)).sort();
+export const brands = () => unique(data.items.map((i) => i.brand)).sort((a, b) => a.localeCompare(b));
+// "Black Diamond Recon LT" – empty for generic items without a brand or model.
+export const makeModel = (i) => [i.brand, i.model].filter(Boolean).join(' ');
 
 // Picks a sensible bag for an item being added to a trip.
 export function guessBag(trip, item) {

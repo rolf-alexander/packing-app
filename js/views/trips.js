@@ -237,10 +237,12 @@ function tiRow(trip, ti, { chips = false } = {}) {
   if (ti.plan !== 'pack') badges.push(`<span class="badge warn">${M.PLAN[ti.plan]}</span>`);
   if (prefs.group === 'cat' && bag && ti.plan === 'pack') badges.push(`<span class="badge">${esc(bag.name)}</span>`);
   const w = M.tiWeight(ti);
+  const mm = M.makeModel(it);
   return `<div class="row ${ti.packed ? 'done' : ''}">
     <button class="tick" data-act="tick" data-id="${ti.id}" aria-pressed="${ti.packed}" aria-label="Packed: ${esc(it.name)}">${icon('check')}</button>
     <button class="row-main" data-act="ti" data-id="${ti.id}">
       <span class="row-title">${esc(it.name)}${ti.qty > 1 ? ` <span class="qty">×${ti.qty}</span>` : ''}</span>
+      ${mm ? `<span class="row-model">${esc(mm)}</span>` : ''}
       ${w || badges.length ? `<span class="row-sub">${w ? `<span>${fmtW(w)}</span>` : ''}${badges.join('')}</span>` : ''}
     </button>
     ${chips && trip.bags.length ? `<div class="bag-chips">${trip.bags.map((b) => `<button class="chip sm" data-act="assign" data-id="${ti.id}" data-bag="${b.id}">${esc(b.name)}</button>`).join('')}</div>` : ''}
@@ -317,6 +319,7 @@ function packTab(trip) {
 function tiSheet(trip, ti) {
   const it = M.itemOf(ti);
   const body = () => `
+    ${M.makeModel(it) ? `<p class="row-model">${esc(M.makeModel(it))}</p>` : ''}
     <p class="muted">${esc(it.category || '')}${it.weight ? ` · ${fmtW(it.weight)} each` : ''}${it.location ? ` · ${esc(it.location)}` : ''}</p>
     ${it.notes ? `<p class="note">${esc(it.notes)}</p>` : ''}
     <h3 class="label">Bag</h3>
@@ -409,7 +412,10 @@ function templateSheet(trip) {
 function shareText(trip, onlyTodo) {
   const s = M.tripStats(trip);
   const tis = M.tripItems(trip.id);
-  const name = (t) => `${M.itemOf(t).name}${t.qty > 1 ? ` ×${t.qty}` : ''}`;
+  const name = (t) => {
+    const mm = M.makeModel(M.itemOf(t));
+    return `${M.itemOf(t).name}${mm ? ` (${mm})` : ''}${t.qty > 1 ? ` ×${t.qty}` : ''}`;
+  };
   const sorted = (list) => list.sort((a, b) => M.itemOf(a).name.localeCompare(M.itemOf(b).name));
   const lines = [
     `${trip.name}${trip.destination ? ` – ${trip.destination}` : ''}`,

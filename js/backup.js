@@ -32,23 +32,24 @@ export async function importJSON(file) {
   toast('Backup restored');
 }
 
-const GEAR_COLS = ['name', 'category', 'weight_g', 'quantity', 'status', 'location', 'carry_on', 'price_chf', 'where_to_buy', 'notes'];
+const GEAR_COLS = ['name', 'brand', 'model', 'category', 'weight_g', 'quantity', 'status', 'location', 'carry_on', 'price_chf', 'where_to_buy', 'notes'];
 
 export async function exportGearCSV() {
   const rows = [GEAR_COLS, ...[...data.items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => [
-    i.name, i.category, i.weight, i.qty, i.status, i.location, i.carryOn ? 'yes' : 'no', i.price ?? '', i.shop, i.notes,
+    i.name, i.brand || '', i.model || '', i.category, i.weight, i.qty, i.status, i.location, i.carryOn ? 'yes' : 'no', i.price ?? '', i.shop, i.notes,
   ])];
   await saveFile(`packlist-gear-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
 }
 
-// Adds new items and updates existing ones (matched by name). Nothing is deleted.
+// Adds new items and updates existing ones. An item matches when its name is the same and, if the CSV
+// has brand/model columns, its brand and model are the same too. Nothing is deleted.
 export async function importGearCSV(file) {
   const rows = parseCSV(await file.text());
   if (rows.length < 2) return toast('That CSV file is empty');
   const head = rows[0].map((h) => norm(h).trim().replace(/[^a-z]+/g, '_').replace(/^_|_$/g, ''));
   const col = (...names) => head.findIndex((h) => names.includes(h));
   const c = {
-    name: col('name', 'item'), category: col('category'), weight: col('weight_g', 'weight', 'grams'), qty: col('quantity', 'qty'),
+    name: col('name', 'item'), brand: col('brand', 'make', 'manufacturer'), model: col('model'), category: col('category'), weight: col('weight_g', 'weight', 'grams'), qty: col('quantity', 'qty'),
     status: col('status'), location: col('location', 'where'), carry: col('carry_on', 'carryon'), price: col('price_chf', 'price', 'unit_price_chf'),
     shop: col('where_to_buy', 'shop', 'store'), notes: col('notes'),
   };
@@ -64,8 +65,15 @@ export async function importGearCSV(file) {
   for (const r of rows.slice(1)) {
     const name = get(r, c.name);
     if (!name) continue;
-    const existing = data.items.find((i) => norm(i.name) === norm(name));
-    const it = existing ? { ...existing } : { id: uid(), name, category: 'Other', weight: 0, qty: 1, status: 'own', location: 'With me', carryOn: false, price: null, shop: '', notes: '', photo: null };
+    const brand = get(r, c.brand);
+    const model = get(r, c.model);
+    const existing = data.items.find(
+      (i) =>
+        norm(i.name) === norm(name) &&
+        (brand === undefined || norm(i.brand) === norm(brand)) &&
+        (model === undefined || norm(i.model) === norm(model)),
+    );
+    const it = existing ? { ...existing } : { id: uid(), name, brand: brand || '', model: model || '', category: 'Other', weight: 0, qty: 1, status: 'own', location: 'With me', carryOn: false, price: null, shop: '', notes: '', photo: null };
     const v = (i) => get(r, i);
     if (v(c.category)) it.category = v(c.category);
     if (v(c.weight)) it.weight = num(v(c.weight)) ?? it.weight;
@@ -85,11 +93,11 @@ export async function importGearCSV(file) {
 }
 
 export async function exportListsCSV() {
-  const rows = [['trip', 'start', 'end', 'bag', 'item', 'category', 'quantity', 'weight_g', 'packed', 'plan']];
+  const rows = [['trip', 'start', 'end', 'bag', 'item', 'brand', 'model', 'category', 'quantity', 'weight_g', 'packed', 'plan']];
   for (const trip of sortedTrips()) {
     for (const t of tripItems(trip.id)) {
       const it = itemOf(t);
-      rows.push([trip.name, trip.start, trip.end, bagOf(trip, t.bagId)?.name || '', it.name, it.category, t.qty, (it.weight || 0) * t.qty, t.packed ? 'yes' : 'no', PLAN[t.plan]]);
+      rows.push([trip.name, trip.start, trip.end, bagOf(trip, t.bagId)?.name || '', it.name, it.brand || '', it.model || '', it.category, t.qty, (it.weight || 0) * t.qty, t.packed ? 'yes' : 'no', PLAN[t.plan]]);
     }
   }
   await saveFile(`packlist-packing-lists-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
@@ -97,11 +105,11 @@ export async function exportListsCSV() {
 
 // Columns chosen to be easy to import into a spending tracker.
 export async function exportShopCSV() {
-  const rows = [['date', 'item', 'category', 'quantity', 'unit_price', 'total', 'currency', 'where_to_buy', 'needed_for', 'notes']];
+  const rows = [['date', 'item', 'brand', 'model', 'category', 'quantity', 'unit_price', 'total', 'currency', 'where_to_buy', 'needed_for', 'notes']];
   for (const i of data.items.filter((x) => x.status === 'buy').sort((a, b) => a.name.localeCompare(b.name))) {
     const total = i.price != null ? (Number(i.price) * (Number(i.qty) || 1)).toFixed(2) : '';
     const trips = [...new Set(tripsUsing(i.id).map((u) => u.trip.name))].join('; ');
-    rows.push([todayKey(), i.name, i.category, i.qty, i.price != null ? Number(i.price).toFixed(2) : '', total, 'CHF', i.shop, trips, i.notes]);
+    rows.push([todayKey(), i.name, i.brand || '', i.model || '', i.category, i.qty, i.price != null ? Number(i.price).toFixed(2) : '', total, 'CHF', i.shop, trips, i.notes]);
   }
   await saveFile(`packlist-shopping-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
 }

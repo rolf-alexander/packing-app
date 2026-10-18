@@ -2,12 +2,12 @@
 import { data, find, save, remove } from './store.js';
 import { esc, fmtW, norm, num, uid, resizeImage } from './util.js';
 import { icon, openSheet, toast, ask, refresh, field, segment } from './ui.js';
-import { STATUS, locations, categories, tripsUsing } from './model.js';
+import { STATUS, locations, categories, brands, makeModel, tripsUsing } from './model.js';
 
 export function itemSheet(item, { defaults = {}, onSaved } = {}) {
   const isNew = !item;
   const it = {
-    name: '', category: '', weight: '', qty: 1, status: 'own', location: 'With me',
+    name: '', brand: '', model: '', category: '', weight: '', qty: 1, status: 'own', location: 'With me',
     carryOn: false, price: null, shop: '', notes: '', photo: null, ...defaults, ...(item || {}),
   };
   let photo = it.photo;
@@ -23,7 +23,13 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
   const body = `<form id="itf" class="form" autocomplete="off">
     <div class="photo-pick" id="photo-area">${photoHtml()}</div>
     <input type="file" accept="image/*" id="photo-in" hidden>
-    ${field('Name', `<input name="name" value="${esc(it.name)}" placeholder="e.g. Avalanche probe" required>`)}
+    ${field('Name', `<input name="name" value="${esc(it.name)}" placeholder="e.g. Avalanche transceiver" required>`)}
+    <div class="grid2">
+      ${field('Brand', `<input name="brand" list="dl-brand" value="${esc(it.brand)}" placeholder="e.g. Mammut">`)}
+      ${field('Model', `<input name="model" value="${esc(it.model)}" placeholder="e.g. Barryvox S">`)}
+    </div>
+    <datalist id="dl-brand">${brands().map((b) => `<option value="${esc(b)}">`).join('')}</datalist>
+    <p class="hint form-hint">Leave brand and model blank for generic things like socks.</p>
     ${field('Category', `<input name="category" list="dl-cat" value="${esc(it.category)}" placeholder="e.g. Avalanche safety">`)}
     <datalist id="dl-cat">${categories().map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
     <div class="grid2">
@@ -73,6 +79,8 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
           ...(item || {}),
           id: item?.id || uid(),
           name,
+          brand: f.get('brand').trim(),
+          model: f.get('model').trim(),
           category: f.get('category').trim() || 'Other',
           weight: num(f.get('weight')) ?? 0,
           qty: Math.max(1, Math.round(num(f.get('qty')) ?? 1)),
@@ -129,7 +137,7 @@ export function pickItems({ title, chosen = [], locked = [], top = '', button = 
 
   const list = () => {
     const nq = norm(q).trim();
-    const items = data.items.filter((i) => !nq || norm(`${i.name} ${i.category} ${i.location}`).includes(nq));
+    const items = data.items.filter((i) => !nq || norm(`${i.name} ${makeModel(i)} ${i.category} ${i.location}`).includes(nq));
     if (!items.length) return `<p class="empty-sm">No gear matches “${esc(q)}”.</p>`;
     const cats = [...new Set(items.map((i) => i.category || 'Other'))].sort();
     return cats
@@ -139,7 +147,7 @@ export function pickItems({ title, chosen = [], locked = [], top = '', button = 
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((i) => {
             const on = sel.has(i.id) || lock.has(i.id);
-            const sub = [i.weight ? fmtW(i.weight) : '', lock.has(i.id) ? 'already added' : '', i.status !== 'own' ? STATUS[i.status] : ''].filter(Boolean).join(' · ');
+            const sub = [esc(makeModel(i)), i.weight ? fmtW(i.weight) : '', lock.has(i.id) ? 'already added' : '', i.status !== 'own' ? STATUS[i.status] : ''].filter(Boolean).join(' · ');
             return `<label class="pick ${lock.has(i.id) ? 'locked' : ''}">
               <input type="checkbox" value="${i.id}" ${on ? 'checked' : ''} ${lock.has(i.id) ? 'disabled' : ''}>
               <span class="pick-box">${icon('check')}</span>

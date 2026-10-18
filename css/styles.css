@@ -171,6 +171,9 @@ button.row, a.row { width: 100%; background: none; border-left: 0; border-right:
 .row-sub .ic { width: 13px; height: 13px; }
 .row-sub .clip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
 .qty { color: var(--muted); font-weight: 600; }
+.row-model { font-size: 14px; font-weight: 550; color: var(--accent); overflow-wrap: anywhere; }
+.chip-label { flex: none; align-self: center; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.form-hint { margin: -6px 2px 14px; }
 .row.done .row-title { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 
 /* The round tick button */

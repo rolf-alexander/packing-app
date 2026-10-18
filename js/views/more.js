@@ -8,7 +8,7 @@ import { gearRow } from './gear.js';
 import { exportJSON, importJSON, exportGearCSV, importGearCSV, exportListsCSV, exportShopCSV } from '../backup.js';
 import { seedStarter } from '../seed.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 // ---------------- More ----------------
 const link = (href, ic, title, sub = '') =>
@@ -209,7 +209,7 @@ function results() {
   const q = norm(sq).trim();
   if (!q) return `<p class="empty-sm">Search across your gear, trips, packing lists, admin tasks, templates and the pre-tour check.</p>`;
   const has = (...v) => norm(v.join(' ')).includes(q);
-  const items = data.items.filter((i) => has(i.name, i.category, i.notes, i.location, i.shop)).sort((a, b) => a.name.localeCompare(b.name));
+  const items = data.items.filter((i) => has(i.name, i.brand, i.model, i.category, i.notes, i.location, i.shop)).sort((a, b) => a.name.localeCompare(b.name));
   const trips = data.trips.filter((t) => has(t.name, t.destination, t.notes, ...t.bags.map((b) => b.name)));
   const tasks = data.tasks.filter((k) => has(k.title, k.notes));
   const tpls = data.templates.filter((t) => has(t.name));
