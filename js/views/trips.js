@@ -272,10 +272,10 @@ function packTab(trip) {
   </div>`;
   const toolbar = `<div class="toolbar">
     <button class="btn grow" data-act="add">${icon('plus')} Items</button>
-    <button class="btn grow" data-act="tpl">${icon('layers')} Template</button>
+    <button class="btn grow" data-act="tpl">${icon('layers')} Kit</button>
     <button class="btn" data-act="share" aria-label="Share list">${icon('share')}</button>
   </div>`;
-  if (!all.length) return summary + toolbar + empty('Nothing on this list yet', 'Add items from your gear, or start from a template like “Ski touring”.');
+  if (!all.length) return summary + toolbar + empty('Nothing on this list yet', 'Add items from your gear, or start from a kit like “Ski touring”.');
 
   const filters = `<div class="chips scroll">
     ${chip('filter', 'all', 'All')}${chip('filter', 'todo', 'To pack')}${chip('filter', 'done', 'Packed')}
@@ -392,12 +392,12 @@ function templateSheet(trip) {
     })
     .join('');
   openSheet({
-    title: 'Add from a template',
+    title: 'Add from a kit',
     body: `<label class="field"><span class="flabel">Put new items in</span>
       <select id="tpl-bag"><option value="auto">Best guess (batteries to carry-on)</option>
       ${trip.bags.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join('')}<option value="">No bag yet</option></select></label>
-      ${rows ? `<div class="list">${rows}</div>` : empty('No templates yet')}
-      <a class="btn block mt" href="#/templates" data-close>${icon('layers')} Manage templates</a>`,
+      ${rows ? `<div class="list">${rows}</div>` : empty('No kits yet')}
+      <a class="btn block mt" href="#/kits" data-close>${icon('layers')} Manage kits</a>`,
     onClick: async (act, el, e, s) => {
       if (act !== 'apply') return;
       const tpl = find('templates', el.dataset.id);

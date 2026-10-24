@@ -1,9 +1,8 @@
-// More: templates, search, backups and settings.
-import { data, find, save, remove, meta, replaceAll, setMeta } from '../store.js';
-import { esc, fmtW, norm, plural, uid } from '../util.js';
-import { header, icon, refresh, toast, ask, promptText, empty, applyTheme, segment } from '../ui.js';
+// More: search, backups and settings.
+import { data, find, meta, replaceAll, setMeta } from '../store.js';
+import { esc, norm, plural } from '../util.js';
+import { header, icon, refresh, toast, ask, empty, applyTheme, segment } from '../ui.js';
 import { tripsUsing } from '../model.js';
-import { pickItems } from '../forms.js';
 import { gearRow } from './gear.js';
 import { exportJSON, importJSON, exportGearCSV, importGearCSV, exportListsCSV, exportShopCSV, exportServiceCSV } from '../backup.js';
 import { seedStarter } from '../seed.js';
@@ -29,7 +28,7 @@ export const moreView = {
     return `${header({ title: 'More' })}
       <div class="page">
         <div class="list">
-          ${link('#/templates', 'layers', 'Templates', `${plural(data.templates.length, 'template')} for building packing lists`)}
+          ${link('#/kits', 'layers', 'Kits', `${plural(data.templates.length, 'kit')} for tours and packing lists`)}
           ${link('#/search', 'search', 'Search everything')}
         </div>
 
@@ -58,7 +57,7 @@ export const moreView = {
 
         <h3 class="group-h"><span>Start over</span></h3>
         <div class="list">
-          ${action('reseed', 'refresh', 'Reset to starter data', 'Deletes everything and reloads your starter gear, 3 templates and the pre-tour checklist', 'danger')}
+          ${action('reseed', 'refresh', 'Reset to starter data', 'Deletes everything and reloads your starter gear, 3 kits and the pre-tour checklist', 'danger')}
           ${action('wipe', 'trash', 'Erase everything', 'Start with a completely empty app', 'danger')}
         </div>
         <p class="hint center">Packlist ${VERSION}</p>
@@ -92,7 +91,7 @@ export const moreView = {
     'exp-shop': () => exportShopCSV(),
     'exp-service': () => exportServiceCSV(),
     reseed: async () => {
-      if (!(await ask('Delete all your gear, trips, templates and lists, and reload the starter gear, templates and pre-tour checklist? Weights, photos and anything you added will be lost. Save a backup first if you want to keep anything.', { title: 'Reset to starter data', ok: 'Reset', danger: true }))) return;
+      if (!(await ask('Delete all your gear, trips, tours, kits and lists, and reload the starter gear, kits and pre-tour checklist? Weights, photos, service logs and anything you added will be lost. Save a backup first if you want to keep anything.', { title: 'Reset to starter data', ok: 'Reset', danger: true }))) return;
       const keep = meta('lastBackup');
       await replaceAll({});
       if (keep) await setMeta('lastBackup', keep);
@@ -102,104 +101,11 @@ export const moreView = {
       refresh();
     },
     wipe: async () => {
-      if (!(await ask('Erase all gear, trips, templates and checklists from this device? This cannot be undone.', { title: 'Erase everything', ok: 'Erase', danger: true }))) return;
+      if (!(await ask('Erase all gear, trips, tours, kits and checklists from this device? This cannot be undone.', { title: 'Erase everything', ok: 'Erase', danger: true }))) return;
       await replaceAll({ meta: { seeded: true } });
       toast('Everything erased');
       location.hash = '#/trips';
       refresh();
-    },
-  },
-};
-
-// ---------------- Templates ----------------
-export const templatesView = {
-  tab: 'more',
-  render() {
-    const list = [...data.templates].sort((a, b) => a.name.localeCompare(b.name));
-    const rows = list
-      .map((t) => {
-        const items = t.itemIds.map((id) => find('items', id)).filter(Boolean);
-        const w = items.reduce((s, i) => s + (Number(i.weight) || 0) * (Number(i.qty) || 1), 0);
-        return link(`#/template/${t.id}`, 'layers', esc(t.name), `${plural(items.length, 'item')} · ${fmtW(w)}`);
-      })
-      .join('');
-    return `${header({ title: 'Templates', back: '#/more' })}
-      <div class="page">
-        <p class="hint">Templates are reusable sets of gear. On a trip's Pack tab, tap <b>Template</b> to add a whole set in one go.</p>
-        ${rows ? `<div class="list">${rows}</div>` : empty('No templates yet', 'Tap + to create one.')}
-      </div>
-      <button class="fab" data-act="new" aria-label="New template">${icon('plus')}</button>`;
-  },
-  act: {
-    new: async () => {
-      const name = await promptText({ title: 'New template', label: 'Name', placeholder: 'e.g. Hut trip', ok: 'Create' });
-      if (!name) return;
-      const t = await save('templates', { id: uid(), name, itemIds: [] });
-      location.hash = `#/template/${t.id}`;
-    },
-  },
-};
-
-export const templateView = {
-  tab: 'more',
-  render(id) {
-    const t = find('templates', id);
-    if (!t) return header({ title: 'Template not found', back: '#/templates' }) + `<div class="page">${empty('This template no longer exists')}</div>`;
-    const items = t.itemIds.map((i) => find('items', i)).filter(Boolean);
-    const cats = [...new Set(items.map((i) => i.category || 'Other'))].sort();
-    const w = items.reduce((s, i) => s + (Number(i.weight) || 0) * (Number(i.qty) || 1), 0);
-    const groups = cats
-      .map((c) => `<h3 class="group-h"><span>${esc(c)}</span></h3><div class="list">${items
-        .filter((i) => (i.category || 'Other') === c)
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((i) => `<div class="row"><div class="row-main static"><span class="row-title">${esc(i.name)}</span>${i.weight ? `<span class="row-sub">${fmtW(i.weight * (i.qty || 1))}</span>` : ''}</div>
-          <button class="icon-btn" data-act="rm" data-id="${i.id}" aria-label="Remove ${esc(i.name)}">${icon('x')}</button></div>`)
-        .join('')}</div>`)
-      .join('');
-    return `${header({ title: t.name, sub: `${plural(items.length, 'item')} · ${fmtW(w)}`, back: '#/templates' })}
-      <div class="page">
-        <div class="toolbar">
-          <button class="btn primary grow" data-act="pick">${icon('edit')} Choose items</button>
-          <button class="btn" data-act="rename">Rename</button>
-          <button class="btn danger" data-act="del" aria-label="Delete template">${icon('trash')}</button>
-        </div>
-        ${groups || empty('This template is empty', 'Tap “Choose items” to pick gear for it.')}
-      </div>`;
-  },
-  act: {
-    pick: (el, e, id) => {
-      const t = find('templates', id);
-      pickItems({
-        title: t.name,
-        chosen: t.itemIds,
-        button: (n) => `Save (${plural(n, 'item')})`,
-        onDone: async (ids, s) => {
-          t.itemIds = ids;
-          await save('templates', t);
-          s.close();
-          refresh();
-        },
-      });
-    },
-    rm: async (el, e, id) => {
-      const t = find('templates', id);
-      t.itemIds = t.itemIds.filter((x) => x !== el.dataset.id);
-      await save('templates', t);
-      refresh();
-    },
-    rename: async (el, e, id) => {
-      const t = find('templates', id);
-      const name = await promptText({ title: 'Rename template', label: 'Name', value: t.name });
-      if (!name) return;
-      t.name = name;
-      await save('templates', t);
-      refresh();
-    },
-    del: async (el, e, id) => {
-      const t = find('templates', id);
-      if (!(await ask(`Delete the template "${t.name}"? Your gear and trips are not affected.`, { title: 'Delete template', ok: 'Delete', danger: true }))) return;
-      await remove('templates', id);
-      location.hash = '#/templates';
     },
   },
 };
@@ -209,7 +115,7 @@ let sq = '';
 
 function results() {
   const q = norm(sq).trim();
-  if (!q) return `<p class="empty-sm">Search across your gear, trips, packing lists, admin tasks, templates and the pre-tour check.</p>`;
+  if (!q) return `<p class="empty-sm">Search across your gear, trips, packing lists, admin tasks, kits and the pre-tour check.</p>`;
   const has = (...v) => norm(v.join(' ')).includes(q);
   const items = data.items.filter((i) => has(i.name, i.brand, i.model, i.category, i.notes, i.location, i.shop)).sort((a, b) => a.name.localeCompare(b.name));
   const trips = data.trips.filter((t) => has(t.name, t.destination, t.notes, ...t.bags.map((b) => b.name)));
@@ -224,7 +130,7 @@ function results() {
     })),
     section('Trips', trips.map((t) => link(`#/trip/${t.id}`, 'map', esc(t.name), esc(t.destination || '')))),
     section('Admin tasks', tasks.map((k) => link(`#/trip/${k.tripId}/admin`, 'tasks', esc(k.title), esc(find('trips', k.tripId)?.name || '')))),
-    section('Templates', tpls.map((t) => link(`#/template/${t.id}`, 'layers', esc(t.name)))),
+    section('Kits', tpls.map((t) => link(`#/kit/${t.id}`, 'layers', esc(t.name)))),
     section('Pre-tour check', checks.map((c) => link('#/check', 'shield', esc(c.text)))),
   ].join('');
   return html || empty('Nothing found', `No matches for “${esc(sq)}”.`);

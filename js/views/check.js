@@ -49,13 +49,14 @@ function editHtml(list) {
 }
 
 export const checkView = {
-  tab: 'check',
+  tab: 'tours',
   render() {
     const list = checks();
     const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
     return `${header({
       title: 'Pre-tour check',
       sub: date,
+      back: 'history',
       right: `<button class="icon-btn" data-act="edit" aria-label="${editing ? 'Done editing' : 'Edit checklist'}">${icon(editing ? 'check' : 'edit')}</button>`,
     })}<div class="page">${editing ? editHtml(list) : viewHtml(list)}</div>`;
   },

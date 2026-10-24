@@ -1,5 +1,5 @@
 // Packing rules and calculations: weights, progress, carry-on checks.
-import { data, find, save } from './store.js';
+import { data, find, save, meta } from './store.js';
 import { uid, unique, norm, addDays, daysUntil, plural } from './util.js';
 
 export const BAG_KINDS = {
@@ -160,3 +160,52 @@ export function tripsUsing(itemId) {
     .map((t) => ({ ti: t, trip: find('trips', t.tripId) }))
     .filter((x) => x.trip);
 }
+
+// ---------- Tour days ----------
+// Condition tags add extra items to a tour's checklist. Saved in meta once you edit them.
+export const DEFAULT_TAGS = [
+  { id: 'cold', name: 'Cold', itemIds: [] },
+  { id: 'windy', name: 'Windy', itemIds: [] },
+  { id: 'icy', name: 'Icy', itemIds: [] },
+  { id: 'wet', name: 'Wet snow', itemIds: [] },
+];
+export const tourTags = () => meta('tags', DEFAULT_TAGS);
+
+export const sortedTours = () => [...data.tours].sort((a, b) => b.date.localeCompare(a.date) || (b.updated || 0) - (a.updated || 0));
+
+// Builds a tour checklist from a kit plus the items linked to the chosen tags.
+export async function startTour(kit, tagIds, date) {
+  const entries = [];
+  const seen = new Set();
+  const add = (itemId, tag = null) => {
+    if (seen.has(itemId) || !find('items', itemId)) return;
+    seen.add(itemId);
+    entries.push({ itemId, packed: false, unused: false, tag });
+  };
+  kit.itemIds.forEach((id) => add(id));
+  const tags = tourTags().filter((t) => tagIds.includes(t.id));
+  for (const t of tags) t.itemIds.forEach((id) => add(id, t.name));
+  // Names are copied so old tours still read well if a kit or tag is renamed or deleted.
+  return save('tours', { id: uid(), kitId: kit.id, kitName: kit.name, date, tags: tags.map((t) => t.name), entries, status: 'packing' });
+}
+
+// For each item on a kit's finished tours: how often it was carried (ticked as packed) and used.
+export function kitUsage(kitId) {
+  const stats = new Map();
+  for (const t of data.tours) {
+    if (t.kitId !== kitId || t.status !== 'done') continue;
+    for (const e of t.entries) {
+      if (!e.packed) continue;
+      const s = stats.get(e.itemId) || { carried: 0, used: 0 };
+      s.carried++;
+      if (!e.unused) s.used++;
+      stats.set(e.itemId, s);
+    }
+  }
+  return stats;
+}
+
+export const neverUsed = (kitId, min = 3) =>
+  [...kitUsage(kitId)]
+    .filter(([id, s]) => s.carried >= min && !s.used && find('items', id))
+    .map(([id, s]) => ({ item: find('items', id), ...s }));

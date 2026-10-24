@@ -1,6 +1,6 @@
 # Packlist
 
-A packing and gear app for my gap year: gear inventory, packing lists per trip and bag, airline weight limits, carry-on battery checks, a daily pre-tour checklist, trip admin tasks and a shopping list.
+A packing and gear app for my gap year: gear inventory with servicing, packing lists per trip and bag, airline weight limits, carry-on battery checks, tour days built from kits, a daily pre-tour checklist, trip admin tasks and a shopping list.
 
 **Live app:** https://rolf-alexander.github.io/packing-app/
 
@@ -52,8 +52,8 @@ No build step and no libraries: plain HTML, CSS and JavaScript.
 | `js/app.js` | Start-up and navigation between screens |
 | `js/store.js` | Saving and loading data (IndexedDB) |
 | `js/model.js` | Packing rules: bag weights, limits, carry-on checks |
-| `js/seed.js` | The starter data: my real gear (weights blank until weighed), 3 ski templates and the pre-tour checks |
-| `js/views/*.js` | One file per screen: trips, gear, item (details and service log), pre-tour check, shop, more/templates/search |
+| `js/seed.js` | The starter data: my real gear (weights blank until weighed), 3 ski kits and the pre-tour checks |
+| `js/views/*.js` | One file per screen: trips, gear, item (details and service log), kits, tours (tour days and condition tags), pre-tour check, shop, more/search |
 | `js/forms.js` | The gear editor and item picker |
 | `js/backup.js` | JSON backup/restore and CSV export/import |
 | `sw.js` | Service worker: stores the app on the phone for offline use |

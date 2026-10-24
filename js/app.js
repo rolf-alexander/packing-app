@@ -7,7 +7,9 @@ import { gearView } from './views/gear.js';
 import { itemView } from './views/item.js';
 import { checkView } from './views/check.js';
 import { shopView } from './views/shop.js';
-import { moreView, templatesView, templateView, searchView } from './views/more.js';
+import { moreView, searchView } from './views/more.js';
+import { kitsView, kitView } from './views/kits.js';
+import { toursView, tourView, tagsView } from './views/tours.js';
 
 const routes = [
   [/^#\/trips$/, tripsView],
@@ -17,15 +19,18 @@ const routes = [
   [/^#\/check$/, checkView],
   [/^#\/shop$/, shopView],
   [/^#\/more$/, moreView],
-  [/^#\/templates$/, templatesView],
-  [/^#\/template\/([\w-]+)$/, templateView],
+  [/^#\/tours$/, toursView],
+  [/^#\/tour\/([\w-]+)$/, tourView],
+  [/^#\/tags$/, tagsView],
+  [/^#\/(?:kits|templates)$/, kitsView],
+  [/^#\/(?:kit|template)\/([\w-]+)$/, kitView],
   [/^#\/search$/, searchView],
 ];
 
 const TABS = [
   ['trips', 'Trips', 'map'],
   ['gear', 'Gear', 'pack'],
-  ['check', 'Pre-tour', 'shield'],
+  ['tours', 'Tours', 'shield'],
   ['shop', 'Shop', 'cart'],
   ['more', 'More', 'more'],
 ];
