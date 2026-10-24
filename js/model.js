@@ -1,6 +1,6 @@
 // Packing rules and calculations: weights, progress, carry-on checks.
 import { data, find, save } from './store.js';
-import { uid, unique, norm } from './util.js';
+import { uid, unique, norm, addDays, daysUntil, plural } from './util.js';
 
 export const BAG_KINDS = {
   checked: 'Checked bag',
@@ -67,6 +67,53 @@ export const brands = () => unique(data.items.map((i) => i.brand)).sort((a, b) =
 export const makeModel = (i) => [i.brand, i.model].filter(Boolean).join(' ');
 // False while the weight field is blank. 0 g counts as weighed (e.g. documents).
 export const hasWeight = (i) => i.weight != null && i.weight !== '' && Number.isFinite(Number(i.weight));
+
+// ---------- Condition and servicing ----------
+export const CONDITION = { good: 'Good', worn: 'Worn', repair: 'Needs repair', retired: 'Retired' };
+export const conditionOf = (i) => (CONDITION[i.condition] ? i.condition : 'good');
+
+// Suggested service tasks for an item, based on its category and name: [task, every n days].
+export function suggestedServices(i) {
+  const cat = norm(i.category);
+  const name = norm(i.name);
+  const out = [];
+  if (cat === 'skis') out.push(['Wax', 21], ['Bindings check (screws, release)', 180]);
+  if (cat === 'skins') out.push(['Glue check', 60]);
+  if (name.includes('transceiver')) out.push(['Battery and self-check', 30]);
+  if (name.includes('airbag')) out.push(['Trigger and canister / battery check', 365]);
+  return out.map(([task, every]) => ({ id: uid(), task, every }));
+}
+
+// Service log entries for one item, newest first.
+export const serviceLog = (itemId) =>
+  data.services.filter((s) => s.itemId === itemId).sort((a, b) => b.date.localeCompare(a.date));
+
+// Each service task with when it was last done and when it is next due.
+// A task that has never been logged counts as due, so logging it the first time starts the clock.
+export function serviceStatus(item) {
+  const log = serviceLog(item.id);
+  return (item.services || []).map((sv) => {
+    const last = log.find((s) => norm(s.task) === norm(sv.task)) || null;
+    const due = last && sv.every ? addDays(last.date, Number(sv.every)) : null;
+    const days = due ? daysUntil(due) : null;
+    return { ...sv, last, due, days, overdue: !!sv.every && (!last || days <= 0) };
+  });
+}
+
+// Why an item needs attention (empty when it doesn't). Retired items never do.
+export function dueReasons(item) {
+  const c = conditionOf(item);
+  if (c === 'retired' || item.status !== 'own') return [];
+  const reasons = c === 'repair' ? ['Needs repair'] : [];
+  for (const s of serviceStatus(item)) {
+    if (!s.overdue) continue;
+    reasons.push(s.last ? `${s.task}: ${s.days === 0 ? 'due today' : `${plural(-s.days, 'day')} overdue`}` : `${s.task}: never logged`);
+  }
+  return reasons;
+}
+
+export const dueItems = () =>
+  data.items.map((item) => ({ item, reasons: dueReasons(item) })).filter((d) => d.reasons.length);
 
 // Picks a sensible bag for an item being added to a trip.
 export function guessBag(trip, item) {

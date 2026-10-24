@@ -1,6 +1,7 @@
 // Starter data loaded the first time the app opens. Everything here can be edited or deleted in the app.
 import { data, meta, save, setMeta } from './store.js';
 import { uid } from './util.js';
+import { suggestedServices } from './model.js';
 
 // [key, name, brand, model, category, quantity, status, notes]
 // Weights are left blank on purpose: weigh each item and fill it in (Gear → Missing weight).
@@ -65,7 +66,9 @@ export async function seedStarter() {
   const items = GEAR.map(([key, name, brand, model, category, qty, status, notes = '']) => {
     const id = uid();
     ref[key] = id;
-    return { id, name, brand, model, category, weight: null, qty, carryOn: false, status, location: '', price: null, shop: '', notes, photo: null };
+    const item = { id, name, brand, model, category, weight: null, qty, carryOn: false, status, location: '', price: null, shop: '', notes, photo: null, condition: 'good' };
+    item.services = suggestedServices(item);
+    return item;
   });
   await save('items', ...items);
 
@@ -81,10 +84,24 @@ export async function seedStarter() {
 
   await save('checks', ...CHECKS.map((text, order) => ({ id: uid(), text, order })));
   await setMeta('seeded', true);
+  await setMeta('serviceDefaults', true);
 }
 
 export async function seedIfEmpty() {
-  if (meta('seeded')) return;
-  if (data.items.length || data.trips.length) return setMeta('seeded', true);
+  if (meta('seeded')) return addServiceDefaults();
+  if (data.items.length || data.trips.length) {
+    await setMeta('seeded', true);
+    return addServiceDefaults();
+  }
   await seedStarter();
+}
+
+// Runs once on devices that had gear before servicing existed: gives each item the suggested
+// service tasks (wax, glue check…). You can change or remove them on the item screen.
+async function addServiceDefaults() {
+  if (meta('serviceDefaults')) return;
+  const changed = data.items.filter((i) => !i.services);
+  for (const i of changed) i.services = suggestedServices(i);
+  if (changed.length) await save('items', ...changed);
+  await setMeta('serviceDefaults', true);
 }

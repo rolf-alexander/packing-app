@@ -22,7 +22,7 @@ Your data lives only on the phone. If you delete the app or lose the phone, the 
 - To restore (for example on a new phone): **More → Restore from backup** and pick the file. This replaces everything in the app.
 - The More screen shows when you last backed up, and warns you after 14 days.
 
-Spreadsheet exports (CSV) are also in More: gear list, all packing lists, and the shopping list (for the spending tracker). You can import a gear CSV. It adds new items and updates items with the same name. Files with comma or semicolon separators both work.
+Spreadsheet exports (CSV) are also in More: gear list (with condition and service tasks), all packing lists, the shopping list (for the spending tracker) and the service log. You can import a gear CSV. It adds new items and updates items with the same name. Files with comma or semicolon separators both work.
 
 ## Updating the app
 
@@ -53,7 +53,7 @@ No build step and no libraries: plain HTML, CSS and JavaScript.
 | `js/store.js` | Saving and loading data (IndexedDB) |
 | `js/model.js` | Packing rules: bag weights, limits, carry-on checks |
 | `js/seed.js` | The starter data: my real gear (weights blank until weighed), 3 ski templates and the pre-tour checks |
-| `js/views/*.js` | One file per screen: trips, gear, pre-tour check, shop, more/templates/search |
+| `js/views/*.js` | One file per screen: trips, gear, item (details and service log), pre-tour check, shop, more/templates/search |
 | `js/forms.js` | The gear editor and item picker |
 | `js/backup.js` | JSON backup/restore and CSV export/import |
 | `sw.js` | Service worker: stores the app on the phone for offline use |

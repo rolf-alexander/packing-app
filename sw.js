@@ -1,6 +1,6 @@
 // Service worker: keeps a copy of the app on the phone so it opens with no internet.
 // IMPORTANT: when you change any app file, bump VERSION so phones download the new files.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `packlist-${VERSION}`;
 const FILES = [
   './',
@@ -17,6 +17,7 @@ const FILES = [
   'js/backup.js',
   'js/views/trips.js',
   'js/views/gear.js',
+  'js/views/item.js',
   'js/views/check.js',
   'js/views/shop.js',
   'js/views/more.js',

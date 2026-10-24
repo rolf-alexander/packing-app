@@ -329,6 +329,8 @@ input.switch:focus { box-shadow: none; }
 .edit-row { gap: 0; padding: 4px 4px 4px 10px; }
 .inline-input { flex: 1; min-width: 0; border: 0; background: none; padding: 10px 6px; }
 .inline-input:focus { box-shadow: none; background: var(--card-2); }
+.days-input { flex: 0 0 64px; text-align: right; }
+.due-card .list { margin-top: 8px; }
 .add-row { display: flex; gap: 8px; margin-top: 12px; }
 
 .share-preview { font: 13px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--card); white-space: pre; overflow: auto; }

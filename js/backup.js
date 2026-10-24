@@ -2,7 +2,7 @@
 import { data, snapshot, replaceAll, save, setMeta } from './store.js';
 import { toCSV, parseCSV, saveFile, todayKey, num, norm, uid } from './util.js';
 import { ask, toast } from './ui.js';
-import { tripsUsing, sortedTrips, tripItems, itemOf, bagOf, PLAN } from './model.js';
+import { tripsUsing, sortedTrips, tripItems, itemOf, bagOf, PLAN, CONDITION, conditionOf, serviceStatus } from './model.js';
 
 const BOM = '﻿'; // makes Excel open the file as UTF-8 (so ä, é, × show correctly)
 
@@ -24,7 +24,7 @@ export async function importJSON(file) {
   if (snap?.app !== 'packing-app' || !Array.isArray(snap.items)) return toast('That file is not a backup from this app');
   const when = snap.exported ? new Date(snap.exported).toLocaleString('en-GB') : 'an unknown date';
   const ok = await ask(
-    `Replace everything on this device with the backup from ${when}? (${snap.items.length} gear items, ${snap.trips?.length || 0} trips.) Anything added since then will be lost.`,
+    `Replace everything on this device with the backup from ${when}? (${snap.items.length} gear items, ${snap.trips?.length || 0} trips, ${snap.services?.length || 0} service log entries.) Anything added since then will be lost.`,
     { title: 'Restore backup', ok: 'Restore', danger: true },
   );
   if (!ok) return;
@@ -32,11 +32,20 @@ export async function importJSON(file) {
   toast('Backup restored');
 }
 
-const GEAR_COLS = ['name', 'brand', 'model', 'category', 'weight_g', 'quantity', 'status', 'location', 'carry_on', 'price_chf', 'where_to_buy', 'notes'];
+const GEAR_COLS = ['name', 'brand', 'model', 'category', 'weight_g', 'quantity', 'status', 'condition', 'location', 'carry_on', 'price_chf', 'where_to_buy', 'notes', 'service_tasks', 'next_service_due'];
+
+// "Wax every 21 days; Glue check every 60 days" and the earliest due date, for the spreadsheet.
+const serviceSummary = (i) => serviceStatus(i).map((s) => (s.every ? `${s.task} every ${s.every} days` : s.task)).join('; ');
+const nextDue = (i) => {
+  const due = serviceStatus(i).filter((s) => s.every);
+  if (due.some((s) => !s.last)) return 'never logged';
+  return due.map((s) => s.due).sort()[0] || '';
+};
 
 export async function exportGearCSV() {
   const rows = [GEAR_COLS, ...[...data.items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => [
-    i.name, i.brand || '', i.model || '', i.category, i.weight ?? '', i.qty, i.status, i.location, i.carryOn ? 'yes' : 'no', i.price ?? '', i.shop, i.notes,
+    i.name, i.brand || '', i.model || '', i.category, i.weight ?? '', i.qty, i.status, CONDITION[conditionOf(i)], i.location, i.carryOn ? 'yes' : 'no', i.price ?? '', i.shop, i.notes,
+    serviceSummary(i), nextDue(i),
   ])];
   await saveFile(`packlist-gear-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
 }
@@ -50,7 +59,7 @@ export async function importGearCSV(file) {
   const col = (...names) => head.findIndex((h) => names.includes(h));
   const c = {
     name: col('name', 'item'), brand: col('brand', 'make', 'manufacturer'), model: col('model'), category: col('category'), weight: col('weight_g', 'weight', 'grams'), qty: col('quantity', 'qty'),
-    status: col('status'), location: col('location', 'where'), carry: col('carry_on', 'carryon'), price: col('price_chf', 'price', 'unit_price_chf'),
+    status: col('status'), condition: col('condition'), location: col('location', 'where'), carry: col('carry_on', 'carryon'), price: col('price_chf', 'price', 'unit_price_chf'),
     shop: col('where_to_buy', 'shop', 'store'), notes: col('notes'),
   };
   if (c.name < 0) return toast('The CSV needs a "name" column');
@@ -58,6 +67,10 @@ export async function importGearCSV(file) {
   const statusOf = (s) => {
     s = norm(s);
     return s.includes('buy') ? 'buy' : s.includes('borrow') ? 'borrow' : 'own';
+  };
+  const parseCondition = (s) => {
+    s = norm(s);
+    return s.includes('repair') ? 'repair' : s.includes('retire') ? 'retired' : s.includes('worn') ? 'worn' : 'good';
   };
   let added = 0;
   let updated = 0;
@@ -79,6 +92,7 @@ export async function importGearCSV(file) {
     if (v(c.weight)) it.weight = num(v(c.weight)) ?? it.weight;
     if (v(c.qty)) it.qty = Math.max(1, Math.round(num(v(c.qty)) ?? 1));
     if (v(c.status)) it.status = statusOf(v(c.status));
+    if (v(c.condition)) it.condition = parseCondition(v(c.condition));
     if (v(c.location) !== undefined && v(c.location) !== '') it.location = v(c.location);
     if (v(c.carry)) it.carryOn = /^(y|yes|true|1|ja|x)$/i.test(v(c.carry));
     if (v(c.price) !== undefined && v(c.price) !== '') it.price = num(v(c.price));
@@ -112,4 +126,14 @@ export async function exportShopCSV() {
     rows.push([todayKey(), i.name, i.brand || '', i.model || '', i.category, i.qty, i.price != null ? Number(i.price).toFixed(2) : '', total, 'CHF', i.shop, trips, i.notes]);
   }
   await saveFile(`packlist-shopping-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
+}
+
+export async function exportServiceCSV() {
+  const rows = [['date', 'item', 'brand', 'model', 'category', 'task', 'notes']];
+  const log = [...data.services].sort((a, b) => b.date.localeCompare(a.date));
+  for (const s of log) {
+    const it = data.items.find((i) => i.id === s.itemId);
+    if (it) rows.push([s.date, it.name, it.brand || '', it.model || '', it.category, s.task, s.notes]);
+  }
+  await saveFile(`packlist-service-log-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
 }

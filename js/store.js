@@ -5,10 +5,11 @@ import { uid } from './util.js';
 
 const DB_NAME = 'packing-app';
 // Version history: 2 = wipe the placeholder data from version 1 and load the real starter gear.
-const DB_VERSION = 2;
-export const STORES = ['items', 'trips', 'tripItems', 'templates', 'tasks', 'checks'];
+// 3 = add the service log (new stores are created below; nothing is wiped).
+const DB_VERSION = 3;
+export const STORES = ['items', 'trips', 'tripItems', 'templates', 'tasks', 'checks', 'services'];
 
-export const data = { items: [], trips: [], tripItems: [], templates: [], tasks: [], checks: [], meta: {} };
+export const data = { items: [], trips: [], tripItems: [], templates: [], tasks: [], checks: [], services: [], meta: {} };
 
 let db;
 

@@ -4,6 +4,7 @@ import { seedIfEmpty } from './seed.js';
 import { icon, setRenderer, refresh, toast } from './ui.js';
 import { tripsView, tripView } from './views/trips.js';
 import { gearView } from './views/gear.js';
+import { itemView } from './views/item.js';
 import { checkView } from './views/check.js';
 import { shopView } from './views/shop.js';
 import { moreView, templatesView, templateView, searchView } from './views/more.js';
@@ -12,6 +13,7 @@ const routes = [
   [/^#\/trips$/, tripsView],
   [/^#\/trip\/([\w-]+)(?:\/(pack|bags|admin|repack))?$/, tripView],
   [/^#\/gear$/, gearView],
+  [/^#\/item\/([\w-]+)$/, itemView],
   [/^#\/check$/, checkView],
   [/^#\/shop$/, shopView],
   [/^#\/more$/, moreView],

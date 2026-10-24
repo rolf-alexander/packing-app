@@ -3,12 +3,12 @@ import { data, find, save, remove, meta, replaceAll, setMeta } from '../store.js
 import { esc, fmtW, norm, plural, uid } from '../util.js';
 import { header, icon, refresh, toast, ask, promptText, empty, applyTheme, segment } from '../ui.js';
 import { tripsUsing } from '../model.js';
-import { itemSheet, pickItems } from '../forms.js';
+import { pickItems } from '../forms.js';
 import { gearRow } from './gear.js';
-import { exportJSON, importJSON, exportGearCSV, importGearCSV, exportListsCSV, exportShopCSV } from '../backup.js';
+import { exportJSON, importJSON, exportGearCSV, importGearCSV, exportListsCSV, exportShopCSV, exportServiceCSV } from '../backup.js';
 import { seedStarter } from '../seed.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.3.0';
 
 // ---------------- More ----------------
 const link = (href, ic, title, sub = '') =>
@@ -45,6 +45,7 @@ export const moreView = {
           ${action('imp-gear', 'upload', 'Import gear list', 'Adds new items and updates ones with the same name')}
           ${action('exp-lists', 'download', 'Export all packing lists')}
           ${action('exp-shop', 'download', 'Export shopping list')}
+          ${action('exp-service', 'download', 'Export service log')}
         </div>
         <input type="file" id="f-json" accept="application/json,.json" hidden>
         <input type="file" id="f-csv" accept=".csv,text/csv,text/plain" hidden>
@@ -89,6 +90,7 @@ export const moreView = {
     'imp-gear': () => document.getElementById('f-csv').click(),
     'exp-lists': () => exportListsCSV(),
     'exp-shop': () => exportShopCSV(),
+    'exp-service': () => exportServiceCSV(),
     reseed: async () => {
       if (!(await ask('Delete all your gear, trips, templates and lists, and reload the starter gear, templates and pre-tour checklist? Weights, photos and anything you added will be lost. Save a backup first if you want to keep anything.', { title: 'Reset to starter data', ok: 'Reset', danger: true }))) return;
       const keep = meta('lastBackup');
@@ -246,5 +248,5 @@ export const searchView = {
     sq = e.target.value;
     document.getElementById('sres').innerHTML = results();
   },
-  act: { item: (el) => itemSheet(find('items', el.dataset.id)) },
+  act: { item: (el) => (location.hash = `#/item/${el.dataset.id}`) },
 };

@@ -1,12 +1,12 @@
 // Gear inventory: the master list of everything you own, need to buy or are borrowing.
-import { data, find } from '../store.js';
+import { data } from '../store.js';
 import { esc, fmtW, norm, plural } from '../util.js';
 import { header, icon, refresh, empty } from '../ui.js';
-import { STATUS, locations, makeModel, hasWeight } from '../model.js';
+import { STATUS, CONDITION, conditionOf, locations, makeModel, hasWeight, serviceStatus, dueItems } from '../model.js';
 import { itemSheet } from '../forms.js';
 
 // Filters and layout for the gear list (kept while the app is open).
-const g = { q: '', status: 'all', loc: 'all', noWeight: false, group: 'category', sort: 'name' };
+const g = { q: '', status: 'all', loc: 'all', noWeight: false, retired: false, dueOpen: false, group: 'category', sort: 'name' };
 
 const GROUPS = {
   category: { label: 'Category', key: (i) => i.category || 'Other' },
@@ -26,6 +26,9 @@ export function gearRow(i, act = 'item', extra = '') {
   if (i.status !== 'own') badges.push(`<span class="badge ${i.status === 'buy' ? 'warn' : ''}">${STATUS[i.status]}</span>`);
   if (i.carryOn) badges.push(`<span class="badge info">${icon('zap')}Carry-on</span>`);
   if (!hasWeight(i)) badges.push('<span class="badge">No weight</span>');
+  const c = conditionOf(i);
+  if (c !== 'good') badges.push(`<span class="badge ${c === 'repair' ? 'bad' : c === 'worn' ? 'warn' : ''}">${CONDITION[c]}</span>`);
+  else if (i.status === 'own' && serviceStatus(i).some((s) => s.overdue)) badges.push('<span class="badge warn">Service due</span>');
   const w = totalWeight(i);
   const mm = makeModel(i);
   return `<button class="row row-main gear-row" data-act="${act}" data-id="${i.id}">
@@ -38,6 +41,18 @@ export function gearRow(i, act = 'item', extra = '') {
   </button>`;
 }
 
+// Items whose service is overdue or that need repair.
+function dueHtml() {
+  const due = dueItems().sort((a, b) => a.item.name.localeCompare(b.item.name));
+  if (!due.length) return '';
+  const rows = due
+    .map(({ item, reasons }) => `<a class="row row-main link-row" href="#/item/${item.id}"><span class="row-text">
+      <span class="row-title">${esc(item.name)}</span><span class="row-sub">${reasons.map((r) => `<span class="badge ${r === 'Needs repair' || r.includes('overdue') ? 'bad' : 'warn'}">${esc(r)}</span>`).join('')}</span></span></a>`)
+    .join('');
+  return `<details class="card due-card" ${g.dueOpen ? 'open' : ''}><summary class="warn-line" data-act="due">${icon('alert')} Due: ${plural(due.length, 'item needs', 'items need')} attention</summary>
+    <div class="list">${rows}</div></details>`;
+}
+
 function listHtml() {
   const q = norm(g.q).trim();
   const items = data.items.filter(
@@ -45,6 +60,7 @@ function listHtml() {
       (g.status === 'all' || i.status === g.status) &&
       (g.loc === 'all' || i.location === g.loc) &&
       (!g.noWeight || !hasWeight(i)) &&
+      (g.retired || conditionOf(i) !== 'retired') &&
       (!q || norm([i.name, i.brand, i.model, i.category, i.notes, i.location, i.shop].join(' ')).includes(q)),
   );
   if (!items.length) return empty(data.items.length ? 'No matching gear' : 'No gear yet', data.items.length ? 'Try a different search or filter.' : 'Tap + to add your first item.');
@@ -67,10 +83,12 @@ export const gearView = {
   tab: 'gear',
   render() {
     const count = (s) => data.items.filter((i) => i.status === s).length;
+    const retired = data.items.filter((i) => conditionOf(i) === 'retired').length;
     const chip = (act, v, label, on) => `<button class="chip ${on ? 'on' : ''}" data-act="${act}" data-v="${esc(v)}">${label}</button>`;
     const statusChips = [['all', 'All'], ['own', 'Own'], ['buy', `To buy (${count('buy')})`], ['borrow', `Borrowing (${count('borrow')})`]]
       .map(([v, l]) => chip('status', v, l, g.status === v))
-      .join('') + chip('noweight', '', `Missing weight (${data.items.filter((i) => !hasWeight(i)).length})`, g.noWeight);
+      .join('') + chip('noweight', '', `Missing weight (${data.items.filter((i) => !hasWeight(i)).length})`, g.noWeight) +
+      (retired ? chip('retired', '', `Show retired (${retired})`, g.retired) : '');
     const locChips = [['all', 'Anywhere'], ...locations().map((l) => [l, l])]
       .map(([v, l]) => chip('loc', v, `${v === 'all' ? '' : icon('pin')}${esc(l)}`, g.loc === v))
       .join('');
@@ -84,6 +102,7 @@ export const gearView = {
         <div class="chips scroll">${statusChips}</div>
         <div class="chips scroll">${locChips}</div>
         <div class="chips scroll"><span class="chip-label">Group</span>${layoutChips}</div>
+        ${dueHtml()}
         <div id="gear-list">${listHtml()}</div>
       </div>
       <button class="fab" data-act="new" aria-label="Add gear">${icon('plus')}</button>`;
@@ -95,9 +114,17 @@ export const gearView = {
   },
   act: {
     new: () => itemSheet(null, { defaults: g.status !== 'all' ? { status: g.status } : {} }),
-    item: (el) => itemSheet(find('items', el.dataset.id)),
+    item: (el) => (location.hash = `#/item/${el.dataset.id}`),
     status: (el) => {
       g.status = el.dataset.v;
+      refresh();
+    },
+    due: () => {
+      g.dueOpen = !g.dueOpen;
+      refresh();
+    },
+    retired: () => {
+      g.retired = !g.retired;
       refresh();
     },
     noweight: () => {

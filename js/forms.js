@@ -2,9 +2,9 @@
 import { data, find, save, remove } from './store.js';
 import { esc, fmtW, norm, num, uid, resizeImage } from './util.js';
 import { icon, openSheet, toast, ask, refresh, field, segment } from './ui.js';
-import { STATUS, locations, categories, brands, makeModel, tripsUsing } from './model.js';
+import { STATUS, CONDITION, conditionOf, locations, categories, brands, makeModel, tripsUsing, suggestedServices } from './model.js';
 
-export function itemSheet(item, { defaults = {}, onSaved } = {}) {
+export function itemSheet(item, { defaults = {}, onSaved, onDeleted } = {}) {
   const isNew = !item;
   const it = {
     name: '', brand: '', model: '', category: '', weight: null, qty: 1, status: 'own', location: 'With me',
@@ -37,6 +37,7 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
       ${field('Quantity', `<input name="qty" inputmode="numeric" value="${esc(it.qty)}">`)}
     </div>
     ${field('Status', segment('status', Object.entries(STATUS), it.status))}
+    ${field('Condition', segment('condition', Object.entries(CONDITION), conditionOf(it)))}
     ${field('Where is it now?', `<input name="location" list="dl-loc" value="${esc(it.location)}" placeholder="e.g. Switzerland">
       <div class="chips tight">${locations().map((l) => `<button type="button" class="chip sm" data-act="loc" data-v="${esc(l)}">${esc(l)}</button>`).join('')}</div>`)}
     <datalist id="dl-loc">${locations().map((l) => `<option value="${esc(l)}">`).join('')}</datalist>
@@ -67,7 +68,10 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
         s.$('#photo-area').innerHTML = photoHtml();
       }
       if (act === 'loc') s.$('[name=location]').value = el.dataset.v;
-      if (act === 'delete' && (await deleteItem(item))) s.close();
+      if (act === 'delete' && (await deleteItem(item))) {
+        s.close();
+        onDeleted?.();
+      }
       if (act === 'save') {
         const f = new FormData(s.$('#itf'));
         const name = f.get('name').trim();
@@ -85,6 +89,7 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
           weight: num(f.get('weight')), // blank stays blank, so it shows under "Missing weight"
           qty: Math.max(1, Math.round(num(f.get('qty')) ?? 1)),
           status: f.get('status') || 'own',
+          condition: f.get('condition') || 'good',
           location: f.get('location').trim(),
           carryOn: f.get('carryOn') === 'on',
           price: num(f.get('price')),
@@ -92,6 +97,7 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
           notes: f.get('notes').trim(),
           photo,
         };
+        if (isNew) obj.services = suggestedServices(obj); // e.g. new skis get "Wax every 21 days"
         await save('items', obj);
         s.close();
         toast(isNew ? `Added ${name}` : 'Saved');
@@ -120,6 +126,7 @@ export async function deleteItem(item) {
   });
   if (!ok) return false;
   await remove('tripItems', ...data.tripItems.filter((t) => t.itemId === item.id).map((t) => t.id));
+  await remove('services', ...data.services.filter((s) => s.itemId === item.id).map((s) => s.id));
   const tpls = data.templates.filter((t) => t.itemIds.includes(item.id));
   for (const t of tpls) t.itemIds = t.itemIds.filter((id) => id !== item.id);
   if (tpls.length) await save('templates', ...tpls);
