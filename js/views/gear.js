@@ -2,11 +2,11 @@
 import { data, find } from '../store.js';
 import { esc, fmtW, norm, plural } from '../util.js';
 import { header, icon, refresh, empty } from '../ui.js';
-import { STATUS, locations, makeModel } from '../model.js';
+import { STATUS, locations, makeModel, hasWeight } from '../model.js';
 import { itemSheet } from '../forms.js';
 
 // Filters and layout for the gear list (kept while the app is open).
-const g = { q: '', status: 'all', loc: 'all', group: 'category', sort: 'name' };
+const g = { q: '', status: 'all', loc: 'all', noWeight: false, group: 'category', sort: 'name' };
 
 const GROUPS = {
   category: { label: 'Category', key: (i) => i.category || 'Other' },
@@ -25,6 +25,7 @@ export function gearRow(i, act = 'item', extra = '') {
   const badges = [];
   if (i.status !== 'own') badges.push(`<span class="badge ${i.status === 'buy' ? 'warn' : ''}">${STATUS[i.status]}</span>`);
   if (i.carryOn) badges.push(`<span class="badge info">${icon('zap')}Carry-on</span>`);
+  if (!hasWeight(i)) badges.push('<span class="badge">No weight</span>');
   const w = totalWeight(i);
   const mm = makeModel(i);
   return `<button class="row row-main gear-row" data-act="${act}" data-id="${i.id}">
@@ -43,13 +44,15 @@ function listHtml() {
     (i) =>
       (g.status === 'all' || i.status === g.status) &&
       (g.loc === 'all' || i.location === g.loc) &&
+      (!g.noWeight || !hasWeight(i)) &&
       (!q || norm([i.name, i.brand, i.model, i.category, i.notes, i.location, i.shop].join(' ')).includes(q)),
   );
   if (!items.length) return empty(data.items.length ? 'No matching gear' : 'No gear yet', data.items.length ? 'Try a different search or filter.' : 'Tap + to add your first item.');
   const branded = items.filter((i) => i.brand || i.model).length;
+  const unweighed = items.filter((i) => !hasWeight(i)).length;
   const grouping = GROUPS[g.group];
   const keys = [...new Set(items.map(grouping.key))].sort((a, b) => (a === grouping.last) - (b === grouping.last) || a.localeCompare(b));
-  return `<p class="hint">${plural(items.length, 'item')} · ${fmtW(items.reduce((s, i) => s + totalWeight(i), 0))} · ${branded} with brand or model</p>` +
+  return `<p class="hint">${plural(items.length, 'item')} · ${fmtW(items.reduce((s, i) => s + totalWeight(i), 0))} · ${branded} with brand or model${unweighed ? ` · ${unweighed} without weight` : ''}</p>` +
     keys
       .map((k) => {
         const list = items.filter((i) => grouping.key(i) === k).sort(SORTS[g.sort].fn);
@@ -67,7 +70,7 @@ export const gearView = {
     const chip = (act, v, label, on) => `<button class="chip ${on ? 'on' : ''}" data-act="${act}" data-v="${esc(v)}">${label}</button>`;
     const statusChips = [['all', 'All'], ['own', 'Own'], ['buy', `To buy (${count('buy')})`], ['borrow', `Borrowing (${count('borrow')})`]]
       .map(([v, l]) => chip('status', v, l, g.status === v))
-      .join('');
+      .join('') + chip('noweight', '', `Missing weight (${data.items.filter((i) => !hasWeight(i)).length})`, g.noWeight);
     const locChips = [['all', 'Anywhere'], ...locations().map((l) => [l, l])]
       .map(([v, l]) => chip('loc', v, `${v === 'all' ? '' : icon('pin')}${esc(l)}`, g.loc === v))
       .join('');
@@ -95,6 +98,10 @@ export const gearView = {
     item: (el) => itemSheet(find('items', el.dataset.id)),
     status: (el) => {
       g.status = el.dataset.v;
+      refresh();
+    },
+    noweight: () => {
+      g.noWeight = !g.noWeight;
       refresh();
     },
     loc: (el) => {

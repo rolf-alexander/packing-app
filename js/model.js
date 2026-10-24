@@ -65,6 +65,8 @@ export const categories = () => unique(data.items.map((i) => i.category)).sort()
 export const brands = () => unique(data.items.map((i) => i.brand)).sort((a, b) => a.localeCompare(b));
 // "Black Diamond Recon LT" – empty for generic items without a brand or model.
 export const makeModel = (i) => [i.brand, i.model].filter(Boolean).join(' ');
+// False while the weight field is blank. 0 g counts as weighed (e.g. documents).
+export const hasWeight = (i) => i.weight != null && i.weight !== '' && Number.isFinite(Number(i.weight));
 
 // Picks a sensible bag for an item being added to a trip.
 export function guessBag(trip, item) {

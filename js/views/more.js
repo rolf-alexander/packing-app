@@ -8,7 +8,7 @@ import { gearRow } from './gear.js';
 import { exportJSON, importJSON, exportGearCSV, importGearCSV, exportListsCSV, exportShopCSV } from '../backup.js';
 import { seedStarter } from '../seed.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 // ---------------- More ----------------
 const link = (href, ic, title, sub = '') =>
@@ -57,7 +57,7 @@ export const moreView = {
 
         <h3 class="group-h"><span>Start over</span></h3>
         <div class="list">
-          ${action('reseed', 'refresh', 'Reset to starter data', 'Deletes everything and reloads the example gear and trips', 'danger')}
+          ${action('reseed', 'refresh', 'Reset to starter data', 'Deletes everything and reloads your starter gear, 3 templates and the pre-tour checklist', 'danger')}
           ${action('wipe', 'trash', 'Erase everything', 'Start with a completely empty app', 'danger')}
         </div>
         <p class="hint center">Packlist ${VERSION}</p>
@@ -90,13 +90,13 @@ export const moreView = {
     'exp-lists': () => exportListsCSV(),
     'exp-shop': () => exportShopCSV(),
     reseed: async () => {
-      if (!(await ask('Delete all your gear, trips and lists, and reload the starter data? Save a backup first if you want to keep anything.', { title: 'Reset to starter data', ok: 'Reset', danger: true }))) return;
+      if (!(await ask('Delete all your gear, trips, templates and lists, and reload the starter gear, templates and pre-tour checklist? Weights, photos and anything you added will be lost. Save a backup first if you want to keep anything.', { title: 'Reset to starter data', ok: 'Reset', danger: true }))) return;
       const keep = meta('lastBackup');
       await replaceAll({});
       if (keep) await setMeta('lastBackup', keep);
       await seedStarter();
       toast('Starter data loaded');
-      location.hash = '#/trips';
+      location.hash = '#/gear';
       refresh();
     },
     wipe: async () => {

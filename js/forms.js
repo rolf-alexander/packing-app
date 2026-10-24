@@ -7,7 +7,7 @@ import { STATUS, locations, categories, brands, makeModel, tripsUsing } from './
 export function itemSheet(item, { defaults = {}, onSaved } = {}) {
   const isNew = !item;
   const it = {
-    name: '', brand: '', model: '', category: '', weight: '', qty: 1, status: 'own', location: 'With me',
+    name: '', brand: '', model: '', category: '', weight: null, qty: 1, status: 'own', location: 'With me',
     carryOn: false, price: null, shop: '', notes: '', photo: null, ...defaults, ...(item || {}),
   };
   let photo = it.photo;
@@ -82,7 +82,7 @@ export function itemSheet(item, { defaults = {}, onSaved } = {}) {
           brand: f.get('brand').trim(),
           model: f.get('model').trim(),
           category: f.get('category').trim() || 'Other',
-          weight: num(f.get('weight')) ?? 0,
+          weight: num(f.get('weight')), // blank stays blank, so it shows under "Missing weight"
           qty: Math.max(1, Math.round(num(f.get('qty')) ?? 1)),
           status: f.get('status') || 'own',
           location: f.get('location').trim(),

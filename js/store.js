@@ -4,7 +4,8 @@
 import { uid } from './util.js';
 
 const DB_NAME = 'packing-app';
-const DB_VERSION = 1;
+// Version history: 2 = wipe the placeholder data from version 1 and load the real starter gear.
+const DB_VERSION = 2;
 export const STORES = ['items', 'trips', 'tripItems', 'templates', 'tasks', 'checks'];
 
 export const data = { items: [], trips: [], tripItems: [], templates: [], tasks: [], checks: [], meta: {} };
@@ -26,8 +27,11 @@ const finished = (tx) =>
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (e) => {
       const d = req.result;
+      // Version 1 only ever held placeholder data, so clear it; seedIfEmpty() then loads the new starter data.
+      // Only from version 1: later upgrades must keep your data.
+      if (e.oldVersion === 1) for (const name of d.objectStoreNames) req.transaction.objectStore(name).clear();
       for (const s of STORES) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' });
       if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
     };

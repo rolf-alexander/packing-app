@@ -52,7 +52,7 @@ No build step and no libraries: plain HTML, CSS and JavaScript.
 | `js/app.js` | Start-up and navigation between screens |
 | `js/store.js` | Saving and loading data (IndexedDB) |
 | `js/model.js` | Packing rules: bag weights, limits, carry-on checks |
-| `js/seed.js` | The starter gear, trips, templates, admin tasks and pre-tour checks |
+| `js/seed.js` | The starter data: my real gear (weights blank until weighed), 3 ski templates and the pre-tour checks |
 | `js/views/*.js` | One file per screen: trips, gear, pre-tour check, shop, more/templates/search |
 | `js/forms.js` | The gear editor and item picker |
 | `js/backup.js` | JSON backup/restore and CSV export/import |

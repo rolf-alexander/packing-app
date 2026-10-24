@@ -36,7 +36,7 @@ const GEAR_COLS = ['name', 'brand', 'model', 'category', 'weight_g', 'quantity',
 
 export async function exportGearCSV() {
   const rows = [GEAR_COLS, ...[...data.items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => [
-    i.name, i.brand || '', i.model || '', i.category, i.weight, i.qty, i.status, i.location, i.carryOn ? 'yes' : 'no', i.price ?? '', i.shop, i.notes,
+    i.name, i.brand || '', i.model || '', i.category, i.weight ?? '', i.qty, i.status, i.location, i.carryOn ? 'yes' : 'no', i.price ?? '', i.shop, i.notes,
   ])];
   await saveFile(`packlist-gear-${todayKey()}.csv`, BOM + toCSV(rows), 'text/csv');
 }
@@ -73,7 +73,7 @@ export async function importGearCSV(file) {
         (brand === undefined || norm(i.brand) === norm(brand)) &&
         (model === undefined || norm(i.model) === norm(model)),
     );
-    const it = existing ? { ...existing } : { id: uid(), name, brand: brand || '', model: model || '', category: 'Other', weight: 0, qty: 1, status: 'own', location: 'With me', carryOn: false, price: null, shop: '', notes: '', photo: null };
+    const it = existing ? { ...existing } : { id: uid(), name, brand: brand || '', model: model || '', category: 'Other', weight: null, qty: 1, status: 'own', location: 'With me', carryOn: false, price: null, shop: '', notes: '', photo: null };
     const v = (i) => get(r, i);
     if (v(c.category)) it.category = v(c.category);
     if (v(c.weight)) it.weight = num(v(c.weight)) ?? it.weight;
